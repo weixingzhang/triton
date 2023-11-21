@@ -15,7 +15,7 @@ SmallVector<unsigned, 3> mmaVersionToInstrShape(int version,
   if (version == 1)
     return {16, 16};
   else if (version == 2)
-    return {16, 8};
+    return {1, 16, 8};
   else if (version == 3) {
     unsigned k = 256 / type.getElementTypeBitWidth();
     if (shape[0] % 64 != 0 || shape[1] % 8 != 0) {
