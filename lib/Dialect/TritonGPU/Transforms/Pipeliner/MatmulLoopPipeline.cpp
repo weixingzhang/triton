@@ -48,14 +48,14 @@ static void createAsyncCopy(scf::ForOp &forOp, tt::LoadOp loadOp, Value alloc,
   // Extract part.
   auto allocType = alloc.getType().cast<RankedTensorType>();
   RankedTensorType sliceType = RankedTensorType::get(
-      {allocType.getShape()[1], allocType.getShape()[2]},
+      {allocType.getShape()[1], allocType.getShape()[2], allocType.getShape()[3]}, // todo: back compatibility
       allocType.getElementType(), allocType.getEncoding());
   auto extract = builder.create<ttg::ExtractSliceOp>(
       loc, sliceType, insertOp.getResult(),
-      SmallVector<OpFoldResult>{extractIdx, int_attr(0), int_attr(0)},
+      SmallVector<OpFoldResult>{extractIdx, int_attr(0), int_attr(0), int_attr(0)},
       SmallVector<OpFoldResult>{int_attr(1), int_attr(sliceType.getShape()[0]),
-                                int_attr(sliceType.getShape()[1])},
-      SmallVector<OpFoldResult>{int_attr(1), int_attr(1), int_attr(1)});
+                                int_attr(sliceType.getShape()[1]), int_attr(sliceType.getShape()[2])},
+      SmallVector<OpFoldResult>{int_attr(1), int_attr(1), int_attr(1), int_attr(1)});
   auto newCvt = builder.create<ttg::ConvertLayoutOp>(
       loadOp->getLoc(), loadOp.getType(), extract.getResult());
   loadOp->replaceAllUsesWith(newCvt->getResults());
