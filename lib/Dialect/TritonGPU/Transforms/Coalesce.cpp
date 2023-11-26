@@ -100,6 +100,13 @@ struct CoalescePass : public TritonGPUCoalesceBase<CoalescePass> {
     } else {
       // Normal cases
       order = argSort(queryAxisInfo(ptr).getContiguity());
+      if (order.size() == 3) {
+        if (order[0] != 2) {
+          order[2] = order[1];
+          order[1] = order[0];
+          order[0] = 2;
+        }
+      }
     }
 
     auto matchesShape = [&refTensorType](const Value &val) {

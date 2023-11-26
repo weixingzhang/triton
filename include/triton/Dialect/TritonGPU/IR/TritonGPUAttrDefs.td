@@ -498,23 +498,69 @@ for
       unsigned remainingWarps = numWarps;
       unsigned prevLanes = 1;
       unsigned prevWarps = 1;
+      if (rank == 3) {
+        remainingThreads = numThreadsPerWarp;
+        remainingWarps = 1;
 
-      // starting from the contiguous dimension
-      for (unsigned d = 0; d < rank - 1; ++d) {
-        unsigned i = order[d];
-        unsigned threadsPerCTA = std::clamp<unsigned>(remainingThreads, 1, shapePerCTA[i] / sizePerThread[i]);
-        threadsPerWarp[i] = std::clamp<unsigned>(threadsPerCTA, 1, remainingLanes);
-        warpsPerCTA[i] = std::clamp<unsigned>(threadsPerCTA / threadsPerWarp[i], 1, remainingWarps);
-        remainingWarps /= warpsPerCTA[i];
-        remainingLanes /= threadsPerWarp[i];
-        remainingThreads /= threadsPerCTA;
-        prevLanes *= threadsPerWarp[i];
-        prevWarps *= warpsPerCTA[i];
+        // starting from the contiguous dimension
+        if (order[rank-1] == 0) {
+          for (unsigned d = 0; d < rank - 2; ++d) {
+            unsigned i = order[d];
+            unsigned threadsPerCTA = std::clamp<unsigned>(remainingThreads, 1, shapePerCTA[i] / sizePerThread[i]);
+            threadsPerWarp[i] = std::clamp<unsigned>(threadsPerCTA, 1, remainingLanes);
+            warpsPerCTA[i] = std::clamp<unsigned>(threadsPerCTA / threadsPerWarp[i], 1, remainingWarps);
+            remainingWarps /= warpsPerCTA[i];
+            remainingLanes /= threadsPerWarp[i];
+            remainingThreads /= threadsPerCTA;
+            prevLanes *= threadsPerWarp[i];
+            prevWarps *= warpsPerCTA[i];
+          }
+
+          // Expand the last dimension to fill the remaining lanes and warps
+          threadsPerWarp[order[rank - 2]] = numThreadsPerWarp / prevLanes;
+          warpsPerCTA[order[rank - 2]] = 1;
+          threadsPerWarp[order[rank - 1]] = 1;
+          warpsPerCTA[order[rank - 1]] = numWarps;
+        } else {
+          for (unsigned d = 0; d < rank - 1; ++d) {
+            unsigned i = order[d];
+            if (i == 0) {
+              threadsPerWarp[i] = 1;
+              warpsPerCTA[i] = numWarps;
+              continue;
+            }
+            unsigned threadsPerCTA = std::clamp<unsigned>(remainingThreads, 1, shapePerCTA[i] / sizePerThread[i]);
+            threadsPerWarp[i] = std::clamp<unsigned>(threadsPerCTA, 1, remainingLanes);
+            warpsPerCTA[i] = std::clamp<unsigned>(threadsPerCTA / threadsPerWarp[i], 1, remainingWarps);
+            remainingWarps /= warpsPerCTA[i];
+            remainingLanes /= threadsPerWarp[i];
+            remainingThreads /= threadsPerCTA;
+            prevLanes *= threadsPerWarp[i];
+            prevWarps *= warpsPerCTA[i];
+          }
+
+          // Expand the last dimension to fill the remaining lanes and warps
+          threadsPerWarp[order[rank - 1]] = numThreadsPerWarp / prevLanes;
+          warpsPerCTA[order[rank - 1]] = 1;
+        }
+      } else {
+        // starting from the contiguous dimension
+        for (unsigned d = 0; d < rank - 1; ++d) {
+          unsigned i = order[d];
+          unsigned threadsPerCTA = std::clamp<unsigned>(remainingThreads, 1, shapePerCTA[i] / sizePerThread[i]);
+          threadsPerWarp[i] = std::clamp<unsigned>(threadsPerCTA, 1, remainingLanes);
+          warpsPerCTA[i] = std::clamp<unsigned>(threadsPerCTA / threadsPerWarp[i], 1, remainingWarps);
+          remainingWarps /= warpsPerCTA[i];
+          remainingLanes /= threadsPerWarp[i];
+          remainingThreads /= threadsPerCTA;
+          prevLanes *= threadsPerWarp[i];
+          prevWarps *= warpsPerCTA[i];
+        }
+
+        // Expand the last dimension to fill the remaining lanes and warps
+        threadsPerWarp[order[rank - 1]] = numThreadsPerWarp / prevLanes;
+        warpsPerCTA[order[rank - 1]] = numWarps / prevWarps;
       }
-
-      // Expand the last dimension to fill the remaining lanes and warps
-      threadsPerWarp[order[rank - 1]] = numThreadsPerWarp / prevLanes;
-      warpsPerCTA[order[rank - 1]] = numWarps / prevWarps;
 
       return $_get(context, sizePerThread, threadsPerWarp, warpsPerCTA, order, CTALayout);
     }]>,
