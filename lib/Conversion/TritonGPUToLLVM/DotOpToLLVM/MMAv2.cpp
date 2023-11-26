@@ -294,8 +294,12 @@ LogicalResult convertDot(TritonGPUToLLVMTypeConverter *typeConverter,
   auto repB = dotOpB.getParent().cast<MmaEncodingAttr>().getMMAv2Rep(
       bShapePerCTA, bitwidth, dotOpB.getOpIdx());
 
-  assert(repA[1] == repB[0]);
-  int repM = repA[0], repN = repB[1], repK = repA[1];
+  int aK = repA.size() == 3 ? repA[2] : repA[1];
+  int bK = repB.size() == 3 ? repB[1] : repB[0];
+  assert(aK == bK);
+  int repM = repA.size() == 3 ? repA[1] : repA[0];
+  int repN = repB.size() == 3 ? repB[2] : repB[1];
+  int repK = repA.size() == 3 ? repA[2] : repA[1];
 
   // shape / shape_per_cta
   auto ha = getValuesFromDotOperandLayoutStruct(typeConverter, loc, rewriter,
